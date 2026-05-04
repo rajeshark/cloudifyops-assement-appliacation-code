@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'ap-south-1'
+        ECR = '539609142335.dkr.ecr.ap-south-1.amazonaws.com'
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps { cleanWs() }
+        }
+
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
+        stage('Prepare') {
+            steps {
+                script {
+                    env.COMMIT_ID = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    env.IMAGE_TAG = "${env.COMMIT_ID}-${env.BUILD_NUMBER}"
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'echo Running WEB tests'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t web-app:${IMAGE_TAG} ./web"
+            }
+        }
+
+        stage('Push Image to ECR') {
+            steps {
+                sh """
+                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR}
+                docker tag web-app:${IMAGE_TAG} ${ECR}/web-app:${IMAGE_TAG}
+                docker push ${ECR}/web-app:${IMAGE_TAG}
+                """
+            }
+        }
+
+        stage('Deploy Decision') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == "develop") {
+                        echo "Deploy WEB to DEV namespace"
+                    } else if (env.BRANCH_NAME == "main") {
+                        echo "Deploy WEB to PROD namespace"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            emailext (
+                subject: "WEB Build ${currentBuild.currentResult}",
+                body: """
+Build: ${env.BUILD_NUMBER}
+Branch: ${env.BRANCH_NAME}
+Commit: ${env.GIT_COMMIT}
+URL: ${env.BUILD_URL}
+""",
+                to: "rajesha100920@gmail.com"
+            )
+        }
+    }
+}
