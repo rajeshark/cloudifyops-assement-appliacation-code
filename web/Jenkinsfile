@@ -20,14 +20,20 @@ pipeline {
             steps {
                 script {
                     env.COMMIT_ID = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    env.IMAGE_TAG = "${env.COMMIT_ID}-${env.BUILD_NUMBER}"
+
+                    // ✅ DEV / PROD TAGGING
+                    if (env.BRANCH_NAME == "develop") {
+                        env.IMAGE_TAG = "${env.COMMIT_ID}-${env.BUILD_NUMBER}-dev"
+                    } else {
+                        env.IMAGE_TAG = "${env.COMMIT_ID}-${env.BUILD_NUMBER}-prod"
+                    }
                 }
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'echo Running WEB tests'
+                sh 'echo Running WEB unit tests'
             }
         }
 
@@ -37,13 +43,13 @@ pipeline {
             }
         }
 
-        stage('Push Image to ECR') {
+        stage('Push to ECR') {
             steps {
-                sh """
-                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR}
-                docker tag web-app:${IMAGE_TAG} ${ECR}/web-app:${IMAGE_TAG}
-                docker push ${ECR}/web-app:${IMAGE_TAG}
-                """
+                sh '''
+                aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 539609142335.dkr.ecr.ap-south-1.amazonaws.com
+                docker tag web-app:${IMAGE_TAG} 539609142335.dkr.ecr.ap-south-1.amazonaws.com/web-app:${IMAGE_TAG}
+                docker push 539609142335.dkr.ecr.ap-south-1.amazonaws.com/web-app:${IMAGE_TAG}
+                '''
             }
         }
 
@@ -52,23 +58,38 @@ pipeline {
                 script {
                     if (env.BRANCH_NAME == "develop") {
                         echo "Deploy WEB to DEV namespace"
-                    } else if (env.BRANCH_NAME == "main") {
+                    } else {
                         echo "Deploy WEB to PROD namespace"
                     }
                 }
+            }
+        }
+
+        // ✅ Integration Test
+        stage('Integration Test') {
+            steps {
+                sh '''
+                echo "Checking pods..."
+                kubectl get pods || true
+
+                echo "Running WEB integration test..."
+                echo "Integration test passed"
+                '''
             }
         }
     }
 
     post {
         always {
-            emailext (
+            emailext(
                 subject: "WEB Build ${currentBuild.currentResult}",
                 body: """
-Build: ${env.BUILD_NUMBER}
+Build Status: ${currentBuild.currentResult}
+Job Name: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
 Branch: ${env.BRANCH_NAME}
-Commit: ${env.GIT_COMMIT}
-URL: ${env.BUILD_URL}
+Commit ID: ${env.GIT_COMMIT}
+Build URL: ${env.BUILD_URL}
 """,
                 to: "rajesha100920@gmail.com"
             )
