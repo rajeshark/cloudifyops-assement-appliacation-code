@@ -14,15 +14,11 @@ pipeline {
     stages {
 
         stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
+            steps { cleanWs() }
         }
 
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Prepare') {
@@ -38,9 +34,7 @@ pipeline {
             parallel {
 
                 stage('SonarQube Analysis') {
-                    steps {
-                        sh 'sonar-scanner'
-                    }
+                    steps { sh 'sonar-scanner' }
                 }
 
                 stage('OWASP Dependency Check') {
@@ -66,9 +60,7 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh '''
-                echo "Running tests..."
-                '''
+                sh 'echo Running tests...'
             }
         }
 
@@ -125,13 +117,18 @@ pipeline {
 
     post {
         always {
-            echo "Post Build Actions"
-
-            sh '''
-            echo "Checking pods..."
-            '''
-
-            echo "Sending email notification (simulated)"
+            emailext (
+                subject: "Build ${currentBuild.currentResult}: ${env.JOB_NAME}",
+                body: """
+Build Status: ${currentBuild.currentResult}
+Job: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Branch: ${env.BRANCH_NAME}
+Commit ID: ${env.GIT_COMMIT}
+Build URL: ${env.BUILD_URL}
+""",
+                to: "rajesha100920@gmail.com"
+            )
         }
     }
 }
