@@ -52,7 +52,9 @@ phases:
 
       - echo Running Trivy Scan
 
-      - trivy image --format table -o trivy-report.txt codepipeline-api-pipeline:latest
+      - trivy image --format table -o trivy-report-api.txt codepipeline-api-pipeline:latest
+
+      - cat trivy-report-api.txt
 
   post_build:
     commands:
@@ -63,4 +65,4 @@ phases:
 
 artifacts:
   files:
-    - trivy-report.txt
+    - trivy-report-api.txt
