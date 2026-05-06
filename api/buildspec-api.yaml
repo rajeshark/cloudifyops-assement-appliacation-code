@@ -34,7 +34,7 @@ phases:
   build:
     commands:
 
-      - sonar-scanner -Dproject.settings=sonar-codebuild-api.properties
+      - sonar-scanner -Dproject.settings=api/sonar-codebuild-api.properties
 
       - docker build -t codepipeline-api-pipeline .
 
