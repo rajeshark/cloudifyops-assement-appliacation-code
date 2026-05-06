@@ -7,7 +7,7 @@ phases:
 
       - echo Installing packages
 
-      - yum install -y wget unzip curl
+      - yum install -y wget unzip
 
       - echo Installing Trivy
 
