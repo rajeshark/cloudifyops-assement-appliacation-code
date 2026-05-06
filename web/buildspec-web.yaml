@@ -8,19 +8,13 @@ phases:
 
     commands:
 
-      - echo Installing packages
-
       - yum install -y wget unzip
-
-      - echo Installing Trivy
 
       - wget https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.tar.gz
 
       - tar -xzf trivy_0.50.1_Linux-64bit.tar.gz
 
       - mv trivy /usr/local/bin/
-
-      - echo Installing Sonar Scanner
 
       - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
 
@@ -33,24 +27,18 @@ phases:
   pre_build:
     commands:
 
-      - echo Logging in to ECR
+      - cd web
 
       - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 539609142335.dkr.ecr.ap-south-1.amazonaws.com
 
   build:
     commands:
 
-      - echo Running SonarQube Scan
-
       - sonar-scanner -Dproject.settings=sonar-codebuild-web.properties
-
-      - echo Building Docker image
 
       - docker build -t codepipeline-web-pipeline .
 
       - docker tag codepipeline-web-pipeline:latest 539609142335.dkr.ecr.ap-south-1.amazonaws.com/codepipeline-web-pipeline:latest
-
-      - echo Running Trivy Scan
 
       - trivy image --format table -o trivy-report-web.txt codepipeline-web-pipeline:latest
 
@@ -59,10 +47,8 @@ phases:
   post_build:
     commands:
 
-      - echo Pushing image to ECR
-
       - docker push 539609142335.dkr.ecr.ap-south-1.amazonaws.com/codepipeline-web-pipeline:latest
 
 artifacts:
   files:
-    - trivy-report-web.txt
+    - web/trivy-report-web.txt
