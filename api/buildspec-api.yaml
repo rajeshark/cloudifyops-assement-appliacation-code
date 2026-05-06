@@ -3,18 +3,19 @@ version: 0.2
 phases:
 
   install:
-    runtime-versions:
-      docker: 20
-
     commands:
+
+      - echo Installing packages
 
       - yum install -y wget unzip
 
-      - wget https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.tar.gz
+      - echo Installing Trivy
 
-      - tar -xzf trivy_0.50.1_Linux-64bit.tar.gz
+      - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
 
-      - mv trivy /usr/local/bin/
+      - mv ./bin/trivy /usr/local/bin/
+
+      - echo Installing Sonar Scanner
 
       - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
 
@@ -24,21 +25,41 @@ phases:
 
       - export PATH=$PATH:/opt/sonar-scanner/bin
 
+      - trivy --version
+
+      - sonar-scanner --version
+
   pre_build:
     commands:
 
+      - echo Moving to api folder
+
       - cd api
+
+      - echo Login to DockerHub
+
+      - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+
+      - echo Login to Amazon ECR
 
       - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 539609142335.dkr.ecr.ap-south-1.amazonaws.com
 
   build:
     commands:
 
-      - sonar-scanner -Dproject.settings=api/sonar-codebuild-api.properties
+      - echo Running SonarQube Scan
+
+      - sonar-scanner -Dproject.settings=sonar-codebuild-api.properties
+
+      - echo Building Docker image
 
       - docker build -t codepipeline-api-pipeline .
 
+      - echo Tagging Docker image
+
       - docker tag codepipeline-api-pipeline:latest 539609142335.dkr.ecr.ap-south-1.amazonaws.com/codepipeline-api-pipeline:latest
+
+      - echo Running Trivy Scan
 
       - trivy image --format table -o trivy-report-api.txt codepipeline-api-pipeline:latest
 
@@ -46,6 +67,8 @@ phases:
 
   post_build:
     commands:
+
+      - echo Pushing Docker image to ECR
 
       - docker push 539609142335.dkr.ecr.ap-south-1.amazonaws.com/codepipeline-api-pipeline:latest
 
