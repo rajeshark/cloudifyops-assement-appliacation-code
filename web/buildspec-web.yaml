@@ -36,6 +36,10 @@ phases:
 
       - cd web
 
+      - echo Login to DockerHub
+
+      - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+
       - echo Login to Amazon ECR
 
       - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 539609142335.dkr.ecr.ap-south-1.amazonaws.com
