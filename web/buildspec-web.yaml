@@ -11,7 +11,9 @@ phases:
 
       - echo Installing Trivy
 
-      - rpm -ivh https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.rpm
+      - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+
+      - mv ./bin/trivy /usr/local/bin/
 
       - echo Installing Sonar Scanner
 
